@@ -1,0 +1,90 @@
+trigger:
+- main  # Tuka valjda moze  dev ili testing da e 
+
+pr:
+  - '*'
+
+pool:
+  vmImage: 'ubuntu-latest' # alternativno 'windows-latest' ili specificna verzija na windows
+# alternativno moze na nasha virtuelka so toa sho kje ima agenpool i name https://learn.microsoft.com/en-us/azure/devops/pipelines/agents/linux-agent?view=azure-devops
+stages:
+- stage: CloneRepo
+  jobs:
+  - job: CloneRepo
+    steps:
+    - checkout: self  
+
+    - script: |
+        git clone https://github.com/username_nekoj/outbase_frontend.git 
+        cd outbase_frontend  
+      displayName: 'Clone Repository'
+- stage: Build
+  jobs:
+  - job: Build
+    steps:
+    - checkout: self
+
+    - script: git pull origin dev
+      displayName: 'Pull Latest Changes'
+
+    - script: |
+        version=$(grep 'Version' .env | cut -d '=' -f2)
+        major_minor_patch=$(echo $version | cut -d '.' -f1-3)
+        build_number=$(echo $version | cut -d '.' -f4)
+
+        if [ "$build_number" -eq "$build_number" ] 2>/dev/null; then
+            build_number=$((build_number + 1))
+        else
+            build_number=0
+        fi
+
+        new_version="$major_minor_patch.$(printf '%04d' $build_number)"
+        sed -i "s/Version=.*/Version=$new_version/" .env
+        git commit -am "Version $new_version"
+        git push origin dev
+      displayName: 'Update .env Version'
+
+    - script: npm install
+      displayName: 'Install Dependencies'
+
+    - script: npm run build-staging  # ili 'npm run build-testing' za testing 
+      displayName: 'Build React App'
+- stage: Test
+  jobs:
+  - job: Test
+    steps:
+    - checkout: self
+    - script: |
+
+        npm install cypress
+        npx cypress run --config-file cypress.json 
+      displayName: 'Run Cypress Tests'
+    - task: PublishTestResults@2
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: '**/junit-*.xml'
+      displayName: 'Publish Test Results'
+- stage: Deploy
+  jobs:
+  - job: Deploy
+    steps:
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathtoPublish: '$(System.DefaultWorkingDirectory)/build' 
+        ArtifactName: 'drop'
+        publishLocation: 'Container'
+      displayName: 'Publish Build Artifacts'
+
+    - script: |
+        cd path/to/local/project/folder
+        cd Build
+
+        scp -r . user@server:/path/to/server/folder
+
+        ssh user@server "mkdir /path/to/NewTemplate2"
+
+        scp -r . user@server:/path/to/NewTemplate2
+
+        ssh user@server "your-server-specific-command"
+      displayName: 'Copy Files and Perform Server Actions'
+
