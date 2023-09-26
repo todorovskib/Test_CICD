@@ -79,7 +79,7 @@ stages:
         cd path/to/local/project/folder
         cd Build
 
-        scp -r . user@server:/path/to/server/folder
+        scp -r .
 
         ssh user@server "mkdir /path/to/NewTemplate2"
 
@@ -87,4 +87,11 @@ stages:
 
         ssh user@server "your-server-specific-command"
       displayName: 'Copy Files and Perform Server Actions'
+
+#- task: AzureRmWebAppDeployment@4
+#  inputs:
+#    ConnectionType: 'PublishProfile'
+#    PublishProfilePath: '$(System.DefaultWorkingDirectory)/**/*.pubxml'
+#    PublishProfilePassword: 'qwer'
+#    packageForLinux: '$(System.DefaultWorkingDirectory)/**/*.zip'
 
