@@ -1,8 +1,8 @@
 trigger:
-- main  # Tuka valjda moze  dev ili testing da e 
+- main  # definirame koga pipelineot trebad a e trigreiran , u slucajniot e koga kje napravime push na main. Tuka valjda moze  dev ili testing da e 
 
 pr:
-  - '*'
+  - '*'  # ovaa e isto taka triger za pipelineot za pull request na bilo koj i da e branch.
 
 pool:
   vmImage: 'ubuntu-latest' # alternativno 'windows-latest' ili specificna verzija na windows
@@ -22,7 +22,7 @@ stages:
   jobs:
   - job: Build
     steps:
-    - checkout: self
+    - checkout: self  # proveruvas dali source code od repo e kaj agents wd .
 
     - script: git pull origin dev
       displayName: 'Pull Latest Changes'
@@ -95,3 +95,9 @@ stages:
 #    PublishProfilePassword: 'qwer'
 #    packageForLinux: '$(System.DefaultWorkingDirectory)/**/*.zip'
 
+#- task: AzureWebApp@1
+#  inputs:
+#    appType: 'webApp'
+#    appName: 
+#    package: '$(System.DefaultWorkingDirectory)/**/*.zip'
+#   deploymentMethod: 'auto'
