@@ -1,0 +1,116 @@
+# ASP.NET Core (.NET Framework)
+# Build and test ASP.NET Core projects targeting the full .NET Framework.
+# Add steps that publish symbols, save build artifacts, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
+
+trigger:
+- main
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+  solution: '**/*.sln'
+  buildPlatform: 'Any CPU'
+  buildConfiguration: 'Release'
+
+steps:
+- task: NuGetToolInstaller@1
+
+- task: NuGetCommand@2
+  inputs:
+    restoreSolution: '$(solution)'
+
+- task: VSBuild@1
+  inputs:
+    solution: '$(solution)'
+    msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:DesktopBuildPackageLocation="$(build.artifactStagingDirectory)\WebApp.zip" /p:DeployIisAppPath="Default Web Site"'
+    platform: '$(buildPlatform)'
+    configuration: '$(buildConfiguration)'
+
+- task: VSTest@2
+  inputs:
+    platform: '$(buildPlatform)'
+    configuration: '$(buildConfiguration)'
+
+stages:
+- stage: DeployBackend
+  jobs:
+  - job: DeployBackend
+    steps:
+    - checkout: self
+
+    - script: |
+        # Pull the latest changes from the main branch
+        git pull origin main
+
+        # Start the API project and the frontend app
+        # Make sure the app is loading properly with the latest changes
+        # Replace with your specific commands to start the projects
+        dotnet run --project YourApiProject.csproj &
+        npm start --prefix path/to/frontend/app
+
+        # Wait for the projects to start (adjust the sleep time as needed)
+        sleep 60
+
+        # Perform tests (replace with your test command)
+        dotnet test Your.Tests.Project.csproj
+
+        # If tests fail, exit with an error code
+        if [ $? -ne 0 ]; then
+          echo "Tests failed. Deployment aborted."
+          exit 1
+        fi
+      displayName: 'Start Projects and Run Tests'
+
+    - script: |
+        # Connect with VPN to the Sopro office
+        # Add your VPN connection script here
+        # e.g., openvpn --config path/to/vpn-config.ovpn
+      displayName: 'Connect to VPN'
+
+    - script: |
+        # Update appsettings.development.json with staging connection strings
+        # Uncomment the last 3 connection strings for live deploy
+        # Replace with your sed commands to modify the file
+        sed -i 's/YourStagingConnectionString1/YourDevelopmentConnectionString1/g' appsettings.development.json
+        sed -i 's/YourStagingConnectionString2/YourDevelopmentConnectionString2/g' appsettings.development.json
+        sed -i 's/YourStagingConnectionString3/YourDevelopmentConnectionString3/g' appsettings.development.json
+      displayName: 'Update appsettings.development.json'
+
+    - script: |
+        # Execute Entity Framework Core migrations
+        dotnet ef database update --context OutbaseDataContext
+        # Skip the following line if there are no changes to EmailFinderDataContext
+        dotnet ef database update --context EmailFinderDataContext
+      displayName: 'Run EF Migrations'
+
+    - script: |
+        # Add a breakpoint to Program.cs if(seed)
+        # Manually move the breakpoint inside the seed function
+        # Start the seed process by running the project
+        # Replace with your specific debugging commands
+      displayName: 'Debug Seed Process'
+
+    - script: |
+        # Stop the API and frontend projects
+        # Replace with your specific commands to stop the projects
+        # e.g., pkill -f "dotnet YourApiProject.dll"
+        # e.g., pkill -f "npm start --prefix path/to/frontend/app"
+      displayName: 'Stop Projects'
+
+    - script: |
+        # Publish the API project (replace with your specific publish commands)
+        dotnet publish YourApiProject.csproj -c Release -o /path/to/publish/folder
+        # Repeat for other backend projects (Functions and HangfireApp)
+        # Replace with your specific publish commands for each project
+      displayName: 'Publish Backend Projects'
+
+    - script: |
+        # For live deploy of Tracking API
+        # Validate the connection and then publish
+        # Replace with your specific publish commands
+        # e.g., dotnet publish YourTrackingApiProject.csproj -c Release -o /path/to/publish/folder
+      displayName: 'Publish Tracking API (Live Only)'
+
+# Add additional steps if needed for other actions
